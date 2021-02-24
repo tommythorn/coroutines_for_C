@@ -10,10 +10,13 @@
 #endif
 #include <ucontext.h>
 #include <setjmp.h>
-
+#include <stdint.h>
 
 typedef struct context_fastest_s {
-    unsigned long *sp;
+    void *resume_pc;
+    void *sp;
+    void *data;
+    void *main_func; // This is just for helper_fun
 } context_fastest_t[1];
 
 void initialize_context_fastest(context_fastest_t ctx,

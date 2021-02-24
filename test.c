@@ -4,7 +4,7 @@
 // 225.3 ns on i7-6700HQ CPU @ 2.6 GHz running Ubuntu 16.04.01
 #include "context_posix.h"
 #define context_t          context_posix_t
-#define switch_context     switch_context_posix
+#define switch_to          switch_context_posix
 #define initialize_context initialize_context_posix
 #endif
 
@@ -12,17 +12,38 @@
 // 21.1 ns on i7-6700HQ CPU @ 2.6 GHz running Ubuntu 16.04.01
 #include "context_fast.h"
 #define context_t          context_fast_t
-#define switch_context     switch_context_fast
+#define switch_to          switch_context_fast
 #define initialize_context initialize_context_fast
 #endif
 
 #if VERSION == 2
-// 12.7 ns on i7-6700HQ CPU @ 2.6 GHz running Ubuntu 16.04.01
+// 0.3 ns on Zen 2 3900XT on Ubuntu 21.04
 #include "context_fastest.h"
 #define context_t          context_fastest_t
-#define switch_context     switch_context_fastest
+#define initialize_context initialize_context_fastest
+
+/*
+ * My gcc asm-fu isn't strong enough to figure out how to eliminate
+ * the two dummy instructions before the call (they turn into movq
+ * %rcx,%rcx and movq %rdx,%rdx respectively, but you can't know that
+ * in general).
+ *
+ * Kudos to Jose Renau for suggesting the use of asm clobbers.
+ */
+#define switch_to(from, to)                                             \
+    __asm__("movq %0,%%rcx\n"                                           \
+            "movq %1,%%rdx\n"                                           \
+            "callq *0(%%rdx)\n"                                         \
+            "popq  0(%%rcx)\n"                                          \
+            "movq  %%rsp,8(%%rcx)\n"                                    \
+            "movq  8(%%rdx),%%rsp\n"                                    \
+            :                                                           \
+            : "r" (from), "r" (to)                                      \
+            : "cc", "memory", "%rbx", "%rbp", "%r12", "%r13", "%r14", "%r15");
+
 #define initialize_context initialize_context_fastest
 #endif
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,7 +71,7 @@ void thread1_fun(void *data)
 
     for (i = 0; i < ITERATIONS; ++i) {
         DEBUG("thread1 (%p): %d\n", data, i);
-        switch_context(thread1, thread2);
+        switch_to(thread1, thread2);
     }
 
     gettimeofday(&tv, NULL);
@@ -71,7 +92,7 @@ void thread2_fun(void *data)
 
     for (i = 0; i < ITERATIONS; ++i) {
         DEBUG("thread2 (%p): %d\n", data, i);
-        switch_context(thread2, thread3);
+        switch_to(thread2, thread3);
     }
 }
 
@@ -81,7 +102,7 @@ void thread3_fun(void *data)
 
     for (i = 0; i < ITERATIONS; ++i) {
         DEBUG("thread3 (%p): %d\n", data, i);
-        switch_context(thread3, thread1);
+        switch_to(thread3, thread1);
     }
 }
 
@@ -105,7 +126,9 @@ static void init_context(context_t ctx, void (*entry)(void *data), void *data)
 {
     // Ok, a fair amount of AMD64 ABI cruft snuck in here.
     // See fx. https://software.intel.com/en-us/forums/intel-isa-extensions/topic/291241
-    void *stack = aligned_malloc(STACKSIZE + RED_ZONE + 8) - 8;
+    void *stack = malloc(STACKSIZE + RED_ZONE + 16);
+    DEBUG("%p: stack = [%p; %p)\n",
+          data, stack, stack + STACKSIZE + RED_ZONE + 16);
     initialize_context(ctx, stack, STACKSIZE, entry, data);
 }
 

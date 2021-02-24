@@ -41,9 +41,10 @@ switch_context_fastest:
         .globl  helper_context_fastest
         .type   helper_context_fastest, @function
 helper_context_fastest:
-        movq    %rbx,%rdi
-        callq   *%r12
-        mov     $1,%rdi
-        callq   _exit
+        popq    0(%rcx)
+        movq    %rsp,8(%rcx)
+        movq    8(%rdx),%rsp
+        movq    16(%rdx),%rdi
+        jmp     *24(%rdx)
 
         .size   helper_context_fastest,.-helper_context_fastest

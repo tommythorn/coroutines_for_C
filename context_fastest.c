@@ -15,15 +15,9 @@ void initialize_context_fastest(context_fastest_t ctx,
 #define RED_ZONE 128
     uintptr_t stack_end = (uintptr_t)stack_base + stack_size - RED_ZONE;
     stack_end &= -16;  // ensure that the stack is 16-byte aligned
-
-    uint64_t *sp = (uint64_t *)stack_end;
-
-    *--sp = (uint64_t) helper_context_fastest;
-    *--sp = (uint64_t) data; // %rbx
-    *--sp = 0; // %rbp
-    *--sp = (uint64_t) entry; // %r12
-    *--sp = 0; // %r13
-    *--sp = 0; // %r14
-    *--sp = 0; // %r15
-    ctx->sp = sp;
+    stack_end -= 8; // to account for the pop
+    ctx->resume_pc = helper_context_fastest;
+    ctx->main_func = entry;
+    ctx->sp = (void *)stack_end;
+    ctx->data = data;
 }
