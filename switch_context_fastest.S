@@ -1,32 +1,4 @@
         .text
-        .align  4
-        .globl  switch_context_fastest
-        .type   switch_context_fastest, @function
-
-/*
-        All we have to save is the callee saved registers.  Everything
-        is dumped to the stack and the only thing stored in, and
-        restored from, the context is the stack pointer.
-
-*/
-switch_context_fastest:
-        push    %rbx
-        push    %rbp
-        push    %r12
-        push    %r13
-        push    %r14
-        push    %r15
-        movq    %rsp,(%rdi)
-        movq    (%rsi),%rsp
-        pop     %r15
-        pop     %r14
-        pop     %r13
-        pop     %r12
-        pop     %rbp
-        pop     %rbx
-        ret
-
-        .size   switch_context_fastest,.-switch_context_fastest
 /*
         The helper function is the first to be entered in a new context
         and serves to call the user entry function with the correct
@@ -41,10 +13,20 @@ switch_context_fastest:
         .globl  helper_context_fastest
         .type   helper_context_fastest, @function
 helper_context_fastest:
+#ifdef __riscv
+        sd      ra,(a5)
+        sd      sp,8(a4)
+        ld      sp,8(a5)
+        ld	t0,(a4)
+        jr	t0
+#endif
+
+#ifdef __amd64
         popq    0(%rcx)
         movq    %rsp,8(%rcx)
         movq    8(%rdx),%rsp
         movq    16(%rdx),%rdi
         jmp     *24(%rdx)
+#endif
 
         .size   helper_context_fastest,.-helper_context_fastest

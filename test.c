@@ -22,6 +22,7 @@
 #define context_t          context_fastest_t
 #define initialize_context initialize_context_fastest
 
+#ifdef __amd64
 /*
  * My gcc asm-fu isn't strong enough to figure out how to eliminate
  * the two dummy instructions before the call (they turn into movq
@@ -42,6 +43,30 @@
             : "cc", "memory", "%rbx", "%rbp", "%r12", "%r13", "%r14", "%r15");
 
 #define initialize_context initialize_context_fastest
+#endif
+#endif
+
+#ifdef __riscv
+
+// Use asm() directives to trick GCC into spilling only caller-save
+// registers that may be live at this point.
+
+#define switch_to(from, to)                                             \
+    __asm__("la      a4,%0\n"                                           \
+            "la      a5,%1\n"                                           \
+            "ld      t0,(a5)\n"                                         \
+            "jalr    t0\n"                                              \
+            "sd      ra,(a5)\n"                                         \
+            "sd      sp,8(a4)\n"                                        \
+            "ld      sp,8(a5)\n"                                        \
+            :                                                           \
+            : "r" (from), "r" (to)                                      \
+            : "cc", "memory",                                           \
+              "ra", "s0",                                               \
+              "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",           \
+              "ft0", "ft1", "ft2", "ft3", "ft4", "ft5", "ft6", "ft7",   \
+              "ft8", "ft9", "ft10", "ft11",                             \
+              "fa0", "fa1", "fa2", "fa3", "fa4", "fa5", "fa6", "fa7");
 #endif
 
 
