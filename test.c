@@ -31,7 +31,7 @@
  *
  * Kudos to Jose Renau for suggesting the use of asm clobbers.
  */
-#define switch_to(from, to)                                             \
+#define switch_context(from, to)                                        \
     __asm__("movq %0,%%rcx\n"                                           \
             "movq %1,%%rdx\n"                                           \
             "callq *0(%%rdx)\n"                                         \
@@ -47,26 +47,46 @@
 #endif
 
 #ifdef __riscv
+/* switch_context is at the heart of the coroutines.  We use asm()
+   directives to trick GCC into spilling only callee-save registers
+   that may be live at this point, thus here we only have to do the
+   following things:
 
-// Use asm() directives to trick GCC into spilling only caller-save
-// registers that may be live at this point.
+   1. Save our sp and resume point in the "from" context.
+   2. Load our new sp and resumption point from the "to" context.
+   3. Jump to it.
 
-#define switch_to(from, to)                                             \
-    __asm__("la      a4,%0\n"                                           \
-            "la      a5,%1\n"                                           \
-            "ld      t0,(a5)\n"                                         \
-            "jalr    t0\n"                                              \
-            "sd      ra,(a5)\n"                                         \
-            "sd      sp,8(a4)\n"                                        \
-            "ld      sp,8(a5)\n"                                        \
-            :                                                           \
-            : "r" (from), "r" (to)                                      \
-            : "cc", "memory",                                           \
-              "ra", "s0",                                               \
-              "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",           \
-              "ft0", "ft1", "ft2", "ft3", "ft4", "ft5", "ft6", "ft7",   \
-              "ft8", "ft9", "ft10", "ft11",                             \
-              "fa0", "fa1", "fa2", "fa3", "fa4", "fa5", "fa6", "fa7");
+   Here we take advantage of the jalr function to set the return
+   address in ra, which means that the save of it ends up in the
+   receiver (this is confusing, but single stepping through it might
+   clear things up).
+
+   Because of this and because of the helper function to get things
+   going, it's required that we fix the registers that pass from and
+   to.  Unfortunately, I don't know of a way to force %0 and %1 to be
+   allocated to two fixed registers, so I can't get rid of the two
+   moves at the beginning.
+
+   Final issue: the jalr below doesn't follow the convention that will
+   signal a coroutine jump.  This SHOULD be fixed, but it's slightly
+   expensive as it requires using t0 which isn't a callee save and
+   thus we would have to save and restore it also.
+*/
+
+#define switch_context(from, to)                                        \
+  __asm__("addi    s0,%0,0\n"                                           \
+          "addi    s1,%1,0\n"                                           \
+          "ld      s2,(s1)\n"                                           \
+          "sd      sp,8(s0)\n"                                          \
+          "ld      sp,8(s1)\n"                                          \
+          "jalr    s2\n"                                                \
+          "sd      ra,(s0)\n"                                           \
+          :                                                             \
+          : "r" (from), "r" (to)                                        \
+          : "memory",                                                   \
+            "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", \
+            "s10", "s11", "fs0", "fs1", "fs2", "fs3", "fs4", "fs5",     \
+            "fs6", "fs7", "fs8", "fs9", "fs10", "fs11")
 #endif
 
 
@@ -75,8 +95,8 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-#define DEBUG(fmt...)
-//#define DEBUG(fmt...) printf(fmt)
+//#define DEBUG(fmt...)
+#define DEBUG(fmt...) printf(fmt)
 
 #define ITERATIONS 10000000
 //#define ITERATIONS 1
@@ -96,7 +116,7 @@ void thread1_fun(void *data)
 
     for (i = 0; i < ITERATIONS; ++i) {
         DEBUG("thread1 (%p): %d\n", data, i);
-        switch_to(thread1, thread2);
+        switch_context(thread1, thread2);
     }
 
     gettimeofday(&tv, NULL);
@@ -113,21 +133,35 @@ void thread1_fun(void *data)
 
 void thread2_fun(void *data)
 {
-    int i;
+    DEBUG("thread2 (%p): -> 1\n", data);
+    switch_context(thread2, thread1);
 
-    for (i = 0; i < ITERATIONS; ++i) {
+    DEBUG("thread2 (%p): -> 1\n", data);
+    switch_context(thread2, thread1);
+
+    DEBUG("thread2 (%p): -> 3\n", data);
+    switch_context(thread2, thread3);
+
+    DEBUG("thread2 (%p): -> 1\n", data);
+    switch_context(thread2, thread1);
+
+    for (int i = 0; i < ITERATIONS; ++i) {
         DEBUG("thread2 (%p): %d\n", data, i);
-        switch_to(thread2, thread3);
+        switch_context(thread2, thread3);
     }
 }
 
 void thread3_fun(void *data)
 {
-    int i;
+    DEBUG("thread3 (%p): -> 2\n", data);
+    switch_context(thread3, thread2);
 
-    for (i = 0; i < ITERATIONS; ++i) {
+    DEBUG("thread3 (%p): -> 1\n", data);
+    switch_context(thread3, thread1);
+
+    for (int i = 0; i < ITERATIONS; ++i) {
         DEBUG("thread3 (%p): %d\n", data, i);
-        switch_to(thread3, thread1);
+        switch_context(thread3, thread1);
     }
 }
 

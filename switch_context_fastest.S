@@ -14,11 +14,11 @@
         .type   helper_context_fastest, @function
 helper_context_fastest:
 #ifdef __riscv
-        sd      ra,(a5)
-        sd      sp,8(a4)
-        ld      sp,8(a5)
-        ld	t0,(a4)
-        jr	t0
+        ld      s2,24(s1)
+        sd      ra,(s0)
+        ld      sp,8(s1)
+        ld      a0,16(s1)
+        jr      s2
 #endif
 
 #ifdef __amd64
