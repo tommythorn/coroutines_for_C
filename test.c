@@ -29,8 +29,8 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-#define DEBUG(fmt...)
-//#define DEBUG(fmt...) printf(fmt)
+//#define DEBUG(fmt...)
+#define DEBUG(fmt...) printf(fmt)
 
 #define ITERATIONS 10000000
 //#define ITERATIONS 1
@@ -69,8 +69,20 @@ void thread2_fun(void *data)
 {
     int i;
 
-    for (i = 0; i < ITERATIONS; ++i) {
-        DEBUG("thread2 (%p): %d\n", data, i);
+    DEBUG("thread2 (%p): -> 1\n", data);
+    switch_context(thread2, thread1);
+
+    DEBUG("thread2 (%p): -> 1\n", data);
+    switch_context(thread2, thread1);
+
+    DEBUG("thread2 (%p): -> 3\n", data);
+    switch_context(thread2, thread3);
+
+    DEBUG("thread2 (%p): -> 1\n", data);
+    switch_context(thread2, thread1);
+
+    for (i = 0;; ++i) {
+        DEBUG("thread2 (%p): %d -> 3\n", data, i);
         switch_context(thread2, thread3);
     }
 }
@@ -79,7 +91,14 @@ void thread3_fun(void *data)
 {
     int i;
 
-    for (i = 0; i < ITERATIONS; ++i) {
+    DEBUG("thread3 (%p): -> 2\n", data);
+    switch_context(thread3, thread2);
+
+    DEBUG("thread3 (%p): -> 1\n", data);
+    switch_context(thread3, thread1);
+
+
+    for (i = 0;; ++i) {
         DEBUG("thread3 (%p): %d\n", data, i);
         switch_context(thread3, thread1);
     }

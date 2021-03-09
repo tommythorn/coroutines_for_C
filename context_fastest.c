@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 void helper_context_fastest(void);
 
@@ -16,8 +17,8 @@ void initialize_context_fastest(context_fastest_t ctx,
 #define RED_ZONE 128
     uintptr_t stack_end = (uintptr_t)stack_base + stack_size - RED_ZONE;
     stack_end &= -16;  // ensure that the stack is 16-byte aligned
-#ifdef _amd64
 
+#ifdef _amd64
     uint64_t *sp = (uint64_t *)stack_end;
 
     *--sp = (uint64_t) helper_context_fastest;
@@ -31,9 +32,11 @@ void initialize_context_fastest(context_fastest_t ctx,
 #endif
 
 #ifdef __riscv
+    assert(sizeof *ctx == 224);
     memset(ctx, 0, sizeof *ctx);
     ctx->sp = stack_end;
-    ctx->ra = (uintptr_t) entry;
-    ctx->a0 = (uintptr_t) data;
+    ctx->ra = (uintptr_t) helper_context_fastest;
+    ctx->data = data;
+    ctx->entry = entry;
 #endif
 }

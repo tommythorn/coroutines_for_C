@@ -29,77 +29,64 @@ switch_context_fastest:
 #endif
 
 #ifdef __riscv
-        // Callee-saves
-        // "ra","s0",
-        // "a0","a1","a2","a3","a4","a5","a6","a7",
-        // "ft0","ft1","ft2","ft3","ft4","ft5","ft6","ft7",
-        // "ft8","ft9","ft10","ft11",
-        // "fa0","fa1","fa2","fa3","fa4","fa5","fa6","fa7"
+        // Callee-saves (ra is special)
+	// sp, s0, .., s11
+	// fs0, .., fs11
 
-        sd      sp,     0(a0)
-        sd      ra,     8(a0)
+        sd      ra,     0(a0)
+        sd      sp,     8(a0)
         sd      s0,     16(a0)
-        sd      a0,     24(a0)
-        sd      a1,     32(a0)
-        sd      a2,     40(a0)
-        sd      a3,     48(a0)
-        sd      a4,     52(a0)
-        sd      a5,     64(a0)
-        sd      a6,     72(a0)
-        sd      a7,     80(a0)
-        fsd     ft0,    88(a0)
-        fsd     ft1,    96(a0)
-        fsd     ft2,    104(a0)
-        fsd     ft3,    112(a0)
-        fsd     ft4,    120(a0)
-        fsd     ft5,    128(a0)
-        fsd     ft6,    136(a0)
-        fsd     ft7,    144(a0)
-        fsd     ft8,    152(a0)
-        fsd     ft9,    160(a0)
-        fsd     ft10,   168(a0)
-        fsd     ft11,   176(a0)
-        fsd     fa0,    184(a0)
-        fsd     fa1,    192(a0)
-        fsd     fa2,    200(a0)
-        fsd     fa3,    208(a0)
-        fsd     fa4,    216(a0)
-        fsd     fa5,    224(a0)
-        fsd     fa6,    232(a0)
-        fsd     fa7,    232(a0)
-
-        ld      sp,     0(a1)
-        ld      ra,     8(a1)
+        sd      s1,     24(a0)
+        sd      s2,     32(a0)
+        sd      s3,     40(a0)
+        sd      s4,     48(a0)
+        sd      s5,     56(a0)
+        sd      s6,     64(a0)
+        sd      s7,     72(a0)
+        sd      s8,     80(a0)
+        sd      s9,     88(a0)
+        sd      s10,    96(a0)
+        sd      s11,    104(a0)
+        fsd     fs0,    112(a0)
+        fsd     fs1,    120(a0)
+        fsd     fs2,    128(a0)
+        fsd     fs3,    136(a0)
+        fsd     fs4,    144(a0)
+        fsd     fs5,    152(a0)
+        fsd     fs6,    160(a0)
+        fsd     fs7,    168(a0)
+        fsd     fs8,    176(a0)
+        fld     fs9,    184(a0)
+        fld     fs10,   192(a0)
+        fld     fs11,   200(a0)
+	
+        ld      ra,     0(a1)
+        ld      sp,     8(a1)
         ld      s0,     16(a1)
-        ld      a0,     24(a1)
-        ld      a2,     40(a1)
-        ld      a3,     48(a1)
-        ld      a4,     52(a1)
-        ld      a5,     64(a1)
-        ld      a6,     72(a1)
-        ld      a7,     80(a1)
-        fld     ft0,    88(a1)
-        fld     ft1,    96(a1)
-        fld     ft2,    104(a1)
-        fld     ft3,    112(a1)
-        fld     ft4,    120(a1)
-        fld     ft5,    128(a1)
-        fld     ft6,    136(a1)
-        fld     ft7,    144(a1)
-        fld     ft8,    152(a1)
-        fld     ft9,    160(a1)
-        fld     ft10,   168(a1)
-        fld     ft11,   176(a1)
-        fld     fa0,    184(a1)
-        fld     fa1,    192(a1)
-        fld     fa2,    200(a1)
-        fld     fa3,    208(a1)
-        fld     fa4,    216(a1)
-        fld     fa5,    224(a1)
-        fld     fa6,    232(a1)
-        fld     fa7,    232(a1)
-        ld      a1,     32(a1)
-        ret
+        ld      s1,     24(a1)
+        ld      s2,     32(a1)
+        ld      s3,     40(a1)
+        ld      s4,     48(a1)
+        ld      s5,     56(a1)
+        ld      s6,     64(a1)
+        ld      s7,     72(a1)
+        ld      s8,     80(a1)
+        ld      s9,     88(a1)
+        ld      s10,    96(a1)
+        ld      s11,    104(a1)
+        fld     fs0,    112(a1)
+        fld     fs1,    120(a1)
+        fld     fs2,    128(a1)
+        fld     fs3,    136(a1)
+        fld     fs4,    144(a1)
+        fld     fs5,    152(a1)
+        fld     fs6,    160(a1)
+        fld     fs7,    168(a1)
+        fld     fs8,    176(a1)
+        fld     fs9,    184(a1)
+        fld     fs10,   192(a1)
+        fld     fs11,   200(a1)
+        ret // XXX replace with jalr t0, ra to get slightly better RAS behavior
 #endif
         .size   switch_context_fastest,.-switch_context_fastest
 /*
@@ -119,10 +106,13 @@ helper_context_fastest:
 #ifdef _amd64
         movq    %rbx,%rdi
         callq   *%r12
-        mov     $1,%rdi
-        callq   _exit
+	ret
 #endif
 
-
+#ifdef __riscv
+	ld	t0, 208(a1)
+	ld	a0, 216(a1)
+	jr	t0
+#endif
 
         .size   helper_context_fastest,.-helper_context_fastest
