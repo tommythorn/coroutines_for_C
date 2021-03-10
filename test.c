@@ -29,8 +29,11 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-//#define DEBUG(fmt...)
+#ifdef BENCH
+#define DEBUG(fmt...)
+#else
 #define DEBUG(fmt...) printf(fmt)
+#endif
 
 #define ITERATIONS 10000000
 //#define ITERATIONS 1
@@ -62,7 +65,7 @@ void thread1_fun(void *data)
         printf("%d context switches in %.1f s, %.1f/s, %.1f ns each\n",
                3 * ITERATIONS, t, f, 1e9/f);
 
-    printf("done\n");
+    DEBUG("done\n");
 }
 
 void thread2_fun(void *data)
