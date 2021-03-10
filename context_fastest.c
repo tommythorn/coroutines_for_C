@@ -32,7 +32,6 @@ void initialize_context_fastest(context_fastest_t ctx,
 #endif
 
 #ifdef __riscv
-    assert(sizeof *ctx == 224);
     memset(ctx, 0, sizeof *ctx);
     ctx->sp = stack_end;
     ctx->ra = (uintptr_t) helper_context_fastest;

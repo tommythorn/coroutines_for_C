@@ -18,20 +18,22 @@ typedef struct context_fastest_s {
 #endif
 
 #ifdef __riscv
-    uint64_t ra;
-    uint64_t sp;
-    uint64_t s0;
-    uint64_t s1;
-    uint64_t s2;
-    uint64_t s3;
-    uint64_t s4;
-    uint64_t s5;
-    uint64_t s6;
-    uint64_t s7;
-    uint64_t s8;
-    uint64_t s9;
-    uint64_t s10;
-    uint64_t s11;
+    uintptr_t ra;
+    uintptr_t sp;
+    uintptr_t s0;
+    uintptr_t s1;
+    uintptr_t s2;
+    uintptr_t s3;
+    uintptr_t s4;
+    uintptr_t s5;
+    uintptr_t s6;
+    uintptr_t s7;
+    uintptr_t s8;
+    uintptr_t s9;
+    uintptr_t s10;
+    uintptr_t s11;
+#ifdef _LP64
+  // XXX We assume no FP in 32-bit
     double   fs0;
     double   fs1;
     double   fs2;
@@ -44,6 +46,7 @@ typedef struct context_fastest_s {
     double   fs9;
     double   fs10;
     double   fs11;
+#endif
 
     void (*entry)(void *); // @ 208
     void *data;

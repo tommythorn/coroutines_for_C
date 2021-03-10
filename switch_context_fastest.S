@@ -30,9 +30,10 @@ switch_context_fastest:
 
 #ifdef __riscv
         // Callee-saves (ra is special)
-	// sp, s0, .., s11
-	// fs0, .., fs11
+        // sp, s0, .., s11
+        // fs0, .., fs11
 
+#ifdef _LP64
         sd      ra,     0(a0)
         sd      sp,     8(a0)
         sd      s0,     16(a0)
@@ -59,7 +60,7 @@ switch_context_fastest:
         fld     fs9,    184(a0)
         fld     fs10,   192(a0)
         fld     fs11,   200(a0)
-	
+
         ld      ra,     0(a1)
         ld      sp,     8(a1)
         ld      s0,     16(a1)
@@ -86,6 +87,38 @@ switch_context_fastest:
         fld     fs9,    184(a1)
         fld     fs10,   192(a1)
         fld     fs11,   200(a1)
+#else
+        // XXX We assume no FP in 32-bit
+        sw      ra,     0(a0)
+        sw      sp,     4(a0)
+        sw      s0,     8(a0)
+        sw      s1,     12(a0)
+        sw      s2,     16(a0)
+        sw      s3,     20(a0)
+        sw      s4,     24(a0)
+        sw      s5,     28(a0)
+        sw      s6,     32(a0)
+        sw      s7,     36(a0)
+        sw      s8,     40(a0)
+        sw      s9,     44(a0)
+        sw      s10,    48(a0)
+        sw      s11,    52(a0)
+
+        lw      ra,     0(a1)
+        lw      sp,     4(a1)
+        lw      s0,     8(a1)
+        lw      s1,     12(a1)
+        lw      s2,     16(a1)
+        lw      s3,     20(a1)
+        lw      s4,     24(a1)
+        lw      s5,     28(a1)
+        lw      s6,     32(a1)
+        lw      s7,     36(a1)
+        lw      s8,     40(a1)
+        lw      s9,     44(a1)
+        lw      s10,    48(a1)
+        lw      s11,    52(a1)
+#endif
         ret // XXX replace with jalr t0, ra to get slightly better RAS behavior
 #endif
         .size   switch_context_fastest,.-switch_context_fastest
@@ -106,13 +139,19 @@ helper_context_fastest:
 #ifdef _amd64
         movq    %rbx,%rdi
         callq   *%r12
-	ret
+        ret
 #endif
 
 #ifdef __riscv
-	ld	t0, 208(a1)
-	ld	a0, 216(a1)
-	jr	t0
+#ifdef _LP64
+        ld      t0, 208(a1)
+        ld      a0, 216(a1)
+        jr      t0
+#else
+        lw      t0, 56(a1)
+        lw      a0, 60(a1)
+        jr      t0
+#endif
 #endif
 
         .size   helper_context_fastest,.-helper_context_fastest
