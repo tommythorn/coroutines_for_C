@@ -73,6 +73,7 @@
    thus we would have to save and restore it also.
 */
 
+#if __riscv_xlen == 64
 #define switch_context(from, to)                                        \
   __asm__("addi    s0,%0,0\n"                                           \
           "addi    s1,%1,0\n"                                           \
@@ -87,6 +88,21 @@
             "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", \
             "s10", "s11", "fs0", "fs1", "fs2", "fs3", "fs4", "fs5",     \
             "fs6", "fs7", "fs8", "fs9", "fs10", "fs11")
+#else // rv32 (no FPU)
+#define switch_context(from, to)                                        \
+  __asm__("addi    s0,%0,0\n"                                           \
+          "addi    s1,%1,0\n"                                           \
+          "lw      s2,(s1)\n"                                           \
+          "sw      sp,4(s0)\n"                                          \
+          "lw      sp,4(s1)\n"                                          \
+          "jalr    s2\n"                                                \
+          "sw      ra,(s0)\n"                                           \
+          :                                                             \
+          : "r" (from), "r" (to)                                        \
+          : "memory",                                                   \
+            "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", \
+            "s10", "s11")
+#endif
 #endif
 
 

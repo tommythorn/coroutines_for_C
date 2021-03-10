@@ -14,11 +14,19 @@
         .type   helper_context_fastest, @function
 helper_context_fastest:
 #ifdef __riscv
+#if __riscv_xlen == 64
         ld      s2,24(s1)
         sd      ra,(s0)
         ld      sp,8(s1)
         ld      a0,16(s1)
         jr      s2
+#else // 32-bit
+        lw      s2,12(s1)
+        sw      ra,(s0)
+        lw      sp,4(s1)
+        lw      a0,8(s1)
+        jr      s2
+#endif
 #endif
 
 #ifdef __amd64
